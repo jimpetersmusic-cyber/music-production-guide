@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Trash2, ChevronRight, Music, Zap, Info, X, Mic, Play, Square, Download } from 'lucide-react';
 
 // Save projects to localStorage whenever they change
