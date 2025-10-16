@@ -452,8 +452,8 @@ export default function MusicProductionGuide() {
     e.target.style.height = Math.min(e.target.scrollHeight, 400) + 'px';
   }} 
   placeholder="Add notes..." 
-  className="w-full bg-slate-600 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
-  style={{ minHeight: '64px' }}
+  className="w-full bg-slate-600 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+  style={{ minHeight: '64px', resize: 'none' }}
 />                              </div>
                             );
                           })}
