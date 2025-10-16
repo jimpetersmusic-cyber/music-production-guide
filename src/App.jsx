@@ -194,7 +194,7 @@ export default function MusicProductionGuide() {
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const blob = new Blob(chunks, { type: 'audio/wav' });
         const url = URL.createObjectURL(blob);
         const newRecording = { url, date: new Date().toLocaleString(), id: Date.now() };
         setRecordings(prev => [...prev, newRecording]);
@@ -217,7 +217,7 @@ export default function MusicProductionGuide() {
   const downloadRecording = (url, index) => {
     const a = document.createElement('a');
     a.href = url;
-    a.download = `recording-${index}.webm`;
+    a.download = `recording-${index}.wav`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -516,7 +516,7 @@ export default function MusicProductionGuide() {
                           <h3 className="text-xl font-semibold mb-4 text-purple-300">Audio Recorder</h3>
                           <div className="mb-4">
                             {isRecording ? (
-                              <button onClick={stopAudioRecording} className="w-full bg-red-600 hover:bg-red-500 px-4 py-3 rounded-lg flex items-center justify-center gap-2 font-semibold">
+                              <button onClick={stopAudioRecording} className="w-full bg-red-600 hover:bg-red-500 px-4 py-3 rounded-lg flex items-center justify-center gap-2  font-semibold">
                                 <Square className="w-5 h-5" /> Stop Recording
                               </button>
                             ) : (
@@ -575,4 +575,4 @@ export default function MusicProductionGuide() {
       )}
     </div>
   );
-} 
+}
