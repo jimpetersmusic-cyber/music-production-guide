@@ -217,7 +217,7 @@ export default function MusicProductionGuide() {
   const downloadRecording = (url, index) => {
     const a = document.createElement('a');
     a.href = url;
-    a.download = `recording-${index}.webm`;
+    a.download = `recording-${index}.wav`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
