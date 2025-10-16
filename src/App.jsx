@@ -363,16 +363,24 @@ const progressPercent = currentProject ? Math.round((completedPhases / phases.le
                 {projects.length === 0 ? (
                   <p className="text-slate-500 text-sm">No projects yet. Create one!</p>
                 ) : (
-                  projects.map(project => (
-                    <div key={project.id} className={`p-3 rounded-lg cursor-pointer transition border-l-4 ${activeProjectId === project.id ? 'bg-purple-600/30 border-purple-400' : 'bg-slate-700/50 border-slate-600 hover:bg-slate-700'}`}>
-                      <div onClick={() => { setActiveProjectId(project.id); setActiveTab('phases'); }}>
-                        <p className="font-medium text-sm">{project.name}</p>
-                        <p className="text-xs text-slate-400 mt-1">{project.createdAt}</p>
-                        <div className="mt-2 bg-slate-600 h-1.5 rounded-full overflow-hidden">
-                          <div className="h-full bg-gradient-to-r from-purple-400 to-pink-400 transition-all" style={{ width: `${progressPercent}%` }} />
-                        </div>
-                        <p className="text-xs text-slate-400 mt-1">{completedPhases}/{phases.length} phases</p>
-                      </div>
+                  {projects.map(project => {
+  const projectCompleted = Object.keys(project.phaseData).filter(key => {
+    const phaseData = project.phaseData[key];
+    const phase = phases.find(p => p.id === key);
+    return phaseData.checkedTips && phaseData.checkedTips.length === phase.tips.length;
+  }).length;
+  const projectProgress = Math.round((projectCompleted / phases.length) * 100);
+
+  return (
+    <div key={project.id} className={`p-3 rounded-lg cursor-pointer transition border-l-4 ${activeProjectId === project.id ? 'bg-purple-600/30 border-purple-400' : 'bg-slate-700/50 border-slate-600 hover:bg-slate-700'}`}>
+      <div onClick={() => { setActiveProjectId(project.id); setActiveTab('phases'); }}>
+        <p className="font-medium text-sm">{project.name}</p>
+        <p className="text-xs text-slate-400 mt-1">{project.createdAt}</p>
+        <div className="mt-2 bg-slate-600 h-1.5 rounded-full overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-purple-400 to-pink-400 transition-all" style={{ width: `${projectProgress}%` }} />
+        </div>
+        <p className="text-xs text-slate-400 mt-1">{projectCompleted}/{phases.length} phases</p>
+      </div>
                       <button onClick={(e) => { e.stopPropagation(); deleteProject(project.id); }} className="mt-2 w-full p-1 text-red-400 hover:bg-red-500/20 rounded text-xs transition">
                         <Trash2 className="w-4 h-4 inline mr-1" /> Delete
                       </button>
