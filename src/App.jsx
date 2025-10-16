@@ -448,13 +448,23 @@ export default function MusicProductionGuide() {
   value={tipNote} 
   onChange={(e) => {
     updateTipNote(activeProjectId, currentPhase.id, idx, e.target.value);
+  }} 
+  onInput={(e) => {
     e.target.style.height = 'auto';
     e.target.style.height = Math.min(e.target.scrollHeight, 400) + 'px';
-  }} 
+  }}
+  ref={(el) => {
+    if (el && tipNote) {
+      setTimeout(() => {
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 400) + 'px';
+      }, 0);
+    }
+  }}
   placeholder="Add notes..." 
   className="w-full bg-slate-600 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
   style={{ minHeight: '64px', resize: 'none' }}
-/>                              </div>
+/>                             </div>
                             );
                           })}
                         </div>
