@@ -385,8 +385,8 @@ const progressPercent = currentProject ? Math.round((completedPhases / phases.le
                         <Trash2 className="w-4 h-4 inline mr-1" /> Delete
                       </button>
                     </div>
-                  ))
-                )}
+                  );
+                })}
               </div>
             </div>
           </div>
