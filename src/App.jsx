@@ -95,14 +95,19 @@ export default function MusicProductionGuide() {
   ];
 
   const noteFrequencies = {
-    'C': 261.63 * Math.pow(2, octave - 4),
-    'D': 293.66 * Math.pow(2, octave - 4),
-    'E': 329.63 * Math.pow(2, octave - 4),
-    'F': 349.23 * Math.pow(2, octave - 4),
-    'G': 392.00 * Math.pow(2, octave - 4),
-    'A': 440 * Math.pow(2, octave - 4),
-    'B': 493.88 * Math.pow(2, octave - 4),
-  };
+  'C': 261.63 * Math.pow(2, octave - 4),
+  'C#': 277.18 * Math.pow(2, octave - 4),
+  'D': 293.66 * Math.pow(2, octave - 4),
+  'D#': 311.13 * Math.pow(2, octave - 4),
+  'E': 329.63 * Math.pow(2, octave - 4),
+  'F': 349.23 * Math.pow(2, octave - 4),
+  'F#': 369.99 * Math.pow(2, octave - 4),
+  'G': 392.00 * Math.pow(2, octave - 4),
+  'G#': 415.30 * Math.pow(2, octave - 4),
+  'A': 440 * Math.pow(2, octave - 4),
+  'A#': 466.16 * Math.pow(2, octave - 4),
+  'B': 493.88 * Math.pow(2, octave - 4),
+};
 
   const initAudioContext = () => {
     if (!audioContextRef.current) {
