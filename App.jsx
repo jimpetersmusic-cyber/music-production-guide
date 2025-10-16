@@ -194,11 +194,11 @@ export default function MusicProductionGuide() {
       };
 
       mediaRecorder.onstop = () => {
-  const blob = new Blob(chunks, { type: 'audio/wav' });
-  const url = URL.createObjectURL(blob);
-  const newRecording = { url, date: new Date().toLocaleString(), id: Date.now() };
-  setRecordings(prev => [...prev, newRecording]);
-};
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        const newRecording = { url, date: new Date().toLocaleString(), id: Date.now() };
+        setRecordings(prev => [...prev, newRecording]);
+      };
 
       mediaRecorder.start();
       setIsRecording(true);
@@ -217,7 +217,7 @@ export default function MusicProductionGuide() {
   const downloadRecording = (url, index) => {
     const a = document.createElement('a');
     a.href = url;
-    a.download = `recording-${index}.wav`;
+    a.download = `recording-${index}.webm`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
