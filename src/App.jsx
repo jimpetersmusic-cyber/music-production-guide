@@ -351,10 +351,7 @@ export default function MusicProductionGuide() {
                       <div onClick={() => { setActiveProjectId(project.id); setActiveTab('phases'); }}>
                         <p className="font-medium text-sm">{project.name}</p>
                         <p className="text-xs text-slate-400 mt-1">{project.createdAt}</p>
-                        <div className="mt-2 bg-slate-600 h-1.5 rounded-full overflow-hidden">
-                          <div className="h-full bg-gradient-to-r from-purple-400 to-pink-400 transition-all" style={{ width: `${progressPercent}%` }} />
-                        </div>
-                        <p className="text-xs text-slate-400 mt-1">{completedPhases}/{phases.length} phases</p>
+                        <p className="text-xs text-slate-400 mt-2">Tap to view progress</p>
                       </div>
                       <button onClick={(e) => { e.stopPropagation(); deleteProject(project.id); }} className="mt-2 w-full p-1 text-red-400 hover:bg-red-500/20 rounded text-xs transition">
                         <Trash2 className="w-4 h-4 inline mr-1" /> Delete
