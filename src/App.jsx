@@ -20,15 +20,21 @@ export default function MusicProductionGuide() {
   const audioContextRef = useRef(null);
 
   useEffect(() => {
+  if (projects.length > 0) {
     localStorage.setItem('musicProductionProjects', JSON.stringify(projects));
-  }, [projects]);
+  }
+}, [projects]);
 
-  useEffect(() => {
+useEffect(() => {
+  try {
     const saved = localStorage.getItem('musicProductionProjects');
-    if (saved) {
+    if (saved && saved !== '[]') {
       setProjects(JSON.parse(saved));
     }
-  }, []);
+  } catch (e) {
+    console.log('Could not load saved projects');
+  }
+}, []);
 
   const phases = [
     {
