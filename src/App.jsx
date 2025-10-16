@@ -444,8 +444,17 @@ export default function MusicProductionGuide() {
                                     <Info className="w-4 h-4 text-purple-400" />
                                   </button>
                                 </div>
-                                <textarea value={tipNote} onChange={(e) => updateTipNote(activeProjectId, currentPhase.id, idx, e.target.value)} placeholder="Add notes..." className="w-full bg-slate-600 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none h-16" />
-                              </div>
+<textarea 
+  value={tipNote} 
+  onChange={(e) => {
+    updateTipNote(activeProjectId, currentPhase.id, idx, e.target.value);
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(e.target.scrollHeight, 400) + 'px';
+  }} 
+  placeholder="Add notes..." 
+  className="w-full bg-slate-600 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+  style={{ minHeight: '64px' }}
+/>                              </div>
                             );
                           })}
                         </div>
