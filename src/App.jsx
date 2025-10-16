@@ -1,23 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Trash2, ChevronRight, Music, Zap, Info, X, Mic, Play, Square, Download } from 'lucide-react';
 
-// Save projects to localStorage whenever they change
-useEffect(() => {
-  localStorage.setItem('musicProductionProjects', JSON.stringify(projects));
-}, [projects]);
-
-// Load projects from localStorage on app startup
-useEffect(() => {
-  const saved = localStorage.getItem('musicProductionProjects');
-  if (saved) {
-    try {
-      setProjects(JSON.parse(saved));
-    } catch (error) {
-      console.error('Failed to load saved projects:', error);
-    }
-  }
-}, []);
-
 export default function MusicProductionGuide() {
   const [projects, setProjects] = useState([]);
   const [showNewProject, setShowNewProject] = useState(false);
@@ -35,6 +18,23 @@ export default function MusicProductionGuide() {
   
   const mediaRecorderRef = useRef(null);
   const audioContextRef = useRef(null);
+
+  // Save projects to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('musicProductionProjects', JSON.stringify(projects));
+  }, [projects]);
+
+  // Load projects from localStorage on app startup
+  useEffect(() => {
+    const saved = localStorage.getItem('musicProductionProjects');
+    if (saved) {
+      try {
+        setProjects(JSON.parse(saved));
+      } catch (error) {
+        console.error('Failed to load saved projects:', error);
+      }
+    }
+  }, []);
 
   const phases = [
     {
