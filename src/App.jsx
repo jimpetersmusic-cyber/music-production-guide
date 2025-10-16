@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Trash2, ChevronRight, Music, Zap, Info, X, Mic, Play, Square, Download } from 'lucide-react';
 
 export default function MusicProductionGuide() {
@@ -18,6 +18,17 @@ export default function MusicProductionGuide() {
   
   const mediaRecorderRef = useRef(null);
   const audioContextRef = useRef(null);
+
+  useEffect(() => {
+    localStorage.setItem('musicProductionProjects', JSON.stringify(projects));
+  }, [projects]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('musicProductionProjects');
+    if (saved) {
+      setProjects(JSON.parse(saved));
+    }
+  }, []);
 
   const phases = [
     {
