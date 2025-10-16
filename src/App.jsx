@@ -303,9 +303,10 @@ export default function MusicProductionGuide() {
   const currentProject = projects.find(p => p.id === activeProjectId);
   const currentPhase = phases.find(p => p.id === activePhase);
   const completedPhases = currentProject ? Object.keys(currentProject.phaseData).filter(key => {
-    const phaseData = currentProject.phaseData[key];
-    return phaseData.checkedTips && phaseData.checkedTips.length > 0;
-  }).length : 0;
+  const phaseData = currentProject.phaseData[key];
+  const phase = phases.find(p => p.id === key);
+  return phaseData.checkedTips && phaseData.checkedTips.length === phase.tips.length;
+}).length : 0;
   const progressPercent = currentProject ? Math.round((completedPhases / phases.length) * 100) : 0;
 
   return (
