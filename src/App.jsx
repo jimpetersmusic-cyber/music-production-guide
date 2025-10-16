@@ -324,20 +324,7 @@ useEffect(() => {
   const phase = phases.find(p => p.id === key);
   return phaseData.checkedTips && phaseData.checkedTips.length === phase.tips.length;
 }).length : 0;
-{projects.map(project => {
-  const projectCompleted = Object.keys(project.phaseData).filter(key => {
-    const phaseData = project.phaseData[key];
-    const phase = phases.find(p => p.id === key);
-    return phaseData.checkedTips && phaseData.checkedTips.length === phase.tips.length;
-  }).length;
-  const projectProgress = Math.round((projectCompleted / phases.length) * 100);
-  
-  return (
-    // ... rest of project card
-    <div className="h-full bg-gradient-to-r from-purple-400 to-pink-400 transition-all" style={{ width: `${projectProgress}%` }} />
-    // ...
-  );
-})}
+const progressPercent = currentProject ? Math.round((completedPhases / phases.length) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-6">
