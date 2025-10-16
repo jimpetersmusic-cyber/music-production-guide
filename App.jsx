@@ -95,14 +95,19 @@ export default function MusicProductionGuide() {
   ];
 
   const noteFrequencies = {
-    'C': 261.63 * Math.pow(2, octave - 4),
-    'D': 293.66 * Math.pow(2, octave - 4),
-    'E': 329.63 * Math.pow(2, octave - 4),
-    'F': 349.23 * Math.pow(2, octave - 4),
-    'G': 392.00 * Math.pow(2, octave - 4),
-    'A': 440 * Math.pow(2, octave - 4),
-    'B': 493.88 * Math.pow(2, octave - 4),
-  };
+  'C': 261.63 * Math.pow(2, octave - 4),
+  'C#': 277.18 * Math.pow(2, octave - 4),
+  'D': 293.66 * Math.pow(2, octave - 4),
+  'D#': 311.13 * Math.pow(2, octave - 4),
+  'E': 329.63 * Math.pow(2, octave - 4),
+  'F': 349.23 * Math.pow(2, octave - 4),
+  'F#': 369.99 * Math.pow(2, octave - 4),
+  'G': 392.00 * Math.pow(2, octave - 4),
+  'G#': 415.30 * Math.pow(2, octave - 4),
+  'A': 440 * Math.pow(2, octave - 4),
+  'A#': 466.16 * Math.pow(2, octave - 4),
+  'B': 493.88 * Math.pow(2, octave - 4),
+};
 
   const initAudioContext = () => {
     if (!audioContextRef.current) {
@@ -467,13 +472,22 @@ export default function MusicProductionGuide() {
                             <span className="text-lg font-bold w-8 text-center">{octave}</span>
                             <button onClick={() => setOctave(Math.min(7, octave + 1))} className="bg-slate-600 hover:bg-slate-500 px-3 py-1 rounded text-sm">+</button>
                           </div>
-                          <div className="grid grid-cols-7 gap-2 mb-4">
-                            {Object.keys(noteFrequencies).map(note => (
-                              <button key={note} onClick={() => handleKeyPress(note)} className="bg-purple-600 hover:bg-purple-500 active:bg-purple-700 px-4 py-6 rounded-lg font-bold transition">
-                                {note}
-                              </button>
-                            ))}
-                          </div>
+                          <div className="relative mb-6">
+  <div className="flex gap-1 mb-2 h-24">
+    {['C', 'D', 'E', 'F', 'G', 'A', 'B'].map(note => (
+      <div key={note} className="relative flex-1">
+        <button onClick={() => handleKeyPress(note)} className="w-full h-24 bg-white hover:bg-gray-200 active:bg-gray-300 text-black font-bold rounded-b-lg border border-gray-300 transition">
+          {note}
+        </button>
+        {['C', 'D', 'F', 'G', 'A'].includes(note) && (
+          <button onClick={() => handleKeyPress(note + '#')} className="absolute right-0 top-0 w-2/3 h-16 bg-black hover:bg-gray-800 active:bg-gray-900 text-white font-bold rounded-b-md border border-black transition z-10 text-xs">
+            {note}#
+          </button>
+        )}
+      </div>
+    ))}
+  </div>
+</div>
                           <div className="flex gap-2 mb-4">
                             <button onClick={playRecordedNotes} disabled={recordedNotes.length === 0 || isPlayingNotes} className="flex-1 bg-green-600 hover:bg-green-500 disabled:bg-slate-600 px-4 py-2 rounded flex items-center justify-center gap-2">
                               <Play className="w-4 h-4" /> Play
