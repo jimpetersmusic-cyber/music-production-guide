@@ -16,10 +16,15 @@ export default function MusicProductionGuide() {
   const [isPlayingNotes, setIsPlayingNotes] = useState(false);
   const [octave, setOctave] = useState(4);
   const [dbReady, setDbReady] = useState(false);
+  const [selectedInstrument, setSelectedInstrument] = useState('bell');
+  const [playingTimeoutIds, setPlayingTimeoutIds] = useState([]);
+  const [lastPadNoteStartTime, setLastPadNoteStartTime] = useState(null);
   
   const mediaRecorderRef = useRef(null);
   const audioContextRef = useRef(null);
   const dbRef = useRef(null);
+  const oscillatorsRef = useRef([]);
+  const currentPadOscRef = useRef(null);
 
   // Initialize IndexedDB and load data
   useEffect(() => {
@@ -229,7 +234,7 @@ export default function MusicProductionGuide() {
     return audioContextRef.current;
   };
 
-  const playNote = (frequency, duration = 200) => {
+  const playNote = (frequency, duration = 200, instrument = 'bell') => {
     const audioContext = initAudioContext();
     const now = audioContext.currentTime;
     const osc = audioContext.createOscillator();
@@ -239,46 +244,163 @@ export default function MusicProductionGuide() {
     gain.connect(audioContext.destination);
     
     osc.frequency.value = frequency;
-    osc.type = 'sine';
-    gain.gain.setValueAtTime(0.3, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + duration / 1000);
     
-    osc.start(now);
-    osc.stop(now + duration / 1000);
+    if (instrument === 'bell') {
+      osc.type = 'triangle';
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.linearRampToValueAtTime(0.5, now + 0.1);
+      gain.gain.linearRampToValueAtTime(0.5, now + 0.5);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + duration / 1000);
+      osc.start(now);
+      const stopTime = now + duration / 1000;
+      osc.stop(stopTime);
+      oscillatorsRef.current.push({ osc, gain, stopTime });
+    } else if (instrument === 'pad') {
+      // Stop the previous pad note immediately
+      if (currentPadOscRef.current) {
+        try {
+          currentPadOscRef.current.osc.stop(now);
+        } catch (e) {}
+      }
+      
+      osc.type = 'sawtooth';
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.linearRampToValueAtTime(0.8, now + 0.1);
+      
+      osc.start(now);
+      
+      // Pad sustains indefinitely but will be stopped when:
+      // 1. A new pad note is played (line above)
+      // 2. Stop button is clicked
+      // 3. Playback ends naturally
+      const veryLongTime = now + 60; // 60 seconds as a safety net
+      osc.stop(veryLongTime);
+      
+      currentPadOscRef.current = { osc, gain };
+      oscillatorsRef.current.push({ osc, gain, stopTime: veryLongTime });
+    } else if (instrument === 'pluck') {
+      osc.type = 'sawtooth';
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.05, now + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      osc.start(now);
+      const stopTime = now + 0.3;
+      osc.stop(stopTime);
+      oscillatorsRef.current.push({ osc, gain, stopTime });
+    }
   };
 
   const handleKeyPress = (note) => {
     const freq = noteFrequencies[note];
-    playNote(freq);
-    setRecordedNotes([...recordedNotes, { note, time: Date.now(), frequency: freq }]);
+    const now = Date.now();
+    
+    playNote(freq, 200, selectedInstrument);
+    setRecordedNotes([...recordedNotes, { note, time: now, frequency: freq, instrument: selectedInstrument }]);
+    
+    // For pad notes, track the start time so we can capture the full sustain duration when released
+    if (selectedInstrument === 'pad') {
+      setLastPadNoteStartTime({ time: now, index: recordedNotes.length });
+    }
+    
+    setIsPlayingNotes(true);
+  };
+
+  const stopAllNotes = () => {
+    const now = audioContextRef.current?.currentTime || 0;
+    
+    // If we were recording pad notes, capture the sustain duration of the last note
+    if (selectedInstrument === 'pad' && lastPadNoteStartTime !== null) {
+      const endTime = Date.now();
+      const sustainDuration = endTime - lastPadNoteStartTime.time;
+      
+      // Update the last recorded note with the actual sustain duration
+      setRecordedNotes(prevNotes => {
+        const updatedNotes = [...prevNotes];
+        if (updatedNotes.length > 0) {
+          updatedNotes[lastPadNoteStartTime.index].duration = sustainDuration;
+        }
+        return updatedNotes;
+      });
+      
+      setLastPadNoteStartTime(null);
+    }
+    
+    // Clear all pending timeouts
+    playingTimeoutIds.forEach(id => clearTimeout(id));
+    
+    // Stop ALL oscillators that are currently playing
+    oscillatorsRef.current.forEach(item => {
+      try {
+        if (item.osc) {
+          item.osc.stop(now);
+        }
+      } catch (e) {}
+    });
+    
+    // Stop current pad if playing
+    if (currentPadOscRef.current) {
+      try {
+        if (currentPadOscRef.current.osc) {
+          currentPadOscRef.current.osc.stop(now);
+        }
+      } catch (e) {}
+      currentPadOscRef.current = null;
+    }
+    
+    oscillatorsRef.current = [];
+    setPlayingTimeoutIds([]);
+    setIsPlayingNotes(false);
   };
 
   const playRecordedNotes = async () => {
     setIsPlayingNotes(true);
     if (recordedNotes.length > 0) {
       const startTime = recordedNotes[0].time;
+      const timeoutIds = [];
       
       for (let i = 0; i < recordedNotes.length; i++) {
         const note = recordedNotes[i];
         const delay = note.time - startTime;
-        setTimeout(() => playNote(note.frequency, 200), delay);
+        const instrument = note.instrument || selectedInstrument;
+        // Use stored duration if available (for pad notes), otherwise default to 200ms
+        const duration = note.duration || 200;
+        const id = setTimeout(() => playNote(note.frequency, duration, instrument), delay);
+        timeoutIds.push(id);
       }
       
-      const totalDuration = recordedNotes[recordedNotes.length - 1].time - startTime + 200;
-      setTimeout(() => setIsPlayingNotes(false), totalDuration);
+      const lastNote = recordedNotes[recordedNotes.length - 1];
+      const lastNoteDuration = lastNote.duration || 200;
+      const totalDuration = lastNote.time - startTime + lastNoteDuration;
+      const finalId = setTimeout(() => {
+        stopAllNotes();
+      }, totalDuration);
+      timeoutIds.push(finalId);
+      
+      setPlayingTimeoutIds(timeoutIds);
     }
   };
 
   const saveKeyboardIdea = () => {
     if (recordedNotes.length > 0) {
+      // If the last note is a pad and doesn't have a duration yet, capture it now
+      let notesToSave = [...recordedNotes];
+      
+      if (selectedInstrument === 'pad' && lastPadNoteStartTime !== null && notesToSave.length > 0) {
+        const lastNoteIndex = notesToSave.length - 1;
+        const endTime = Date.now();
+        const sustainDuration = endTime - lastPadNoteStartTime.time;
+        notesToSave[lastNoteIndex].duration = sustainDuration;
+      }
+      
       const idea = {
         id: Date.now(),
-        notes: [...recordedNotes],
+        notes: notesToSave,
         date: new Date().toLocaleString(),
         name: `Idea ${savedKeyboardIdeas.length + 1}`
       };
       setSavedKeyboardIdeas([...savedKeyboardIdeas, idea]);
       setRecordedNotes([]);
+      setLastPadNoteStartTime(null);
     }
   };
 
@@ -286,15 +408,27 @@ export default function MusicProductionGuide() {
     setIsPlayingNotes(true);
     if (idea.notes.length > 0) {
       const startTime = idea.notes[0].time;
+      const timeoutIds = [];
       
       for (let i = 0; i < idea.notes.length; i++) {
         const note = idea.notes[i];
         const delay = note.time - startTime;
-        setTimeout(() => playNote(note.frequency, 200), delay);
+        const instrument = note.instrument || selectedInstrument;
+        // Use stored duration if available, otherwise default to 200ms
+        const duration = note.duration || 200;
+        const id = setTimeout(() => playNote(note.frequency, duration, instrument), delay);
+        timeoutIds.push(id);
       }
       
-      const totalDuration = idea.notes[idea.notes.length - 1].time - startTime + 200;
-      setTimeout(() => setIsPlayingNotes(false), totalDuration);
+      const lastNote = idea.notes[idea.notes.length - 1];
+      const lastNoteDuration = lastNote.duration || 200;
+      const totalDuration = lastNote.time - startTime + lastNoteDuration;
+      const finalId = setTimeout(() => {
+        stopAllNotes();
+      }, totalDuration);
+      timeoutIds.push(finalId);
+      
+      setPlayingTimeoutIds(timeoutIds);
     }
   };
 
@@ -316,6 +450,7 @@ export default function MusicProductionGuide() {
         const url = URL.createObjectURL(blob);
         const newRecording = { url, date: new Date().toLocaleString(), id: Date.now() };
         setRecordings(prev => [...prev, newRecording]);
+        stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.start();
@@ -593,6 +728,20 @@ export default function MusicProductionGuide() {
                             <span className="text-lg font-bold w-8 text-center">{octave}</span>
                             <button onClick={() => setOctave(Math.min(7, octave + 1))} className="bg-slate-600 hover:bg-slate-500 px-3 py-1 rounded text-sm">+</button>
                           </div>
+                          <div className="mb-4">
+                            <p className="text-sm text-slate-300 mb-2">Instrument:</p>
+                            <div className="flex gap-2">
+                              {['bell', 'pad', 'pluck'].map(inst => (
+                                <button
+                                  key={inst}
+                                  onClick={() => setSelectedInstrument(inst)}
+                                  className={`px-3 py-1 rounded text-sm capitalize transition ${selectedInstrument === inst ? 'bg-purple-600' : 'bg-slate-600 hover:bg-slate-500'}`}
+                                >
+                                  {inst}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                           <div className="relative mb-6">
                             <div className="flex gap-1 mb-2 h-24">
                               {['C', 'D', 'E', 'F', 'G', 'A', 'B'].map(note => (
@@ -610,13 +759,16 @@ export default function MusicProductionGuide() {
                             </div>
                           </div>
                           <div className="flex gap-2 mb-4">
-                            <button onClick={playRecordedNotes} disabled={recordedNotes.length === 0 || isPlayingNotes} className="flex-1 bg-green-600 hover:bg-green-500 disabled:bg-slate-600 px-4 py-2 rounded flex items-center justify-center gap-2">
-                              <Play className="w-4 h-4" /> Play
+                            <button onClick={playRecordedNotes} disabled={recordedNotes.length === 0 || isPlayingNotes} className="flex-1 min-w-0 bg-green-600 hover:bg-green-500 disabled:bg-slate-600 px-2 py-2 rounded flex items-center justify-center gap-1 text-sm">
+                              <Play className="w-4 h-4 flex-shrink-0" /> <span className="hidden sm:inline">Play</span>
                             </button>
-                            <button onClick={saveKeyboardIdea} disabled={recordedNotes.length === 0} className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 px-4 py-2 rounded flex items-center justify-center gap-2">
-                              💾 Save Idea
+                            <button onClick={stopAllNotes} disabled={!isPlayingNotes} className="flex-1 min-w-0 bg-orange-600 hover:bg-orange-500 disabled:bg-slate-600 px-2 py-2 rounded flex items-center justify-center gap-1 text-sm">
+                              <Square className="w-4 h-4 flex-shrink-0" /> <span className="hidden sm:inline">Stop</span>
                             </button>
-                            <button onClick={() => setRecordedNotes([])} disabled={recordedNotes.length === 0} className="flex-1 bg-red-600 hover:bg-red-500 disabled:bg-slate-600 px-4 py-2 rounded">
+                            <button onClick={saveKeyboardIdea} disabled={recordedNotes.length === 0} className="flex-1 min-w-0 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 px-2 py-2 rounded flex items-center justify-center gap-1 text-sm">
+                              💾 <span className="hidden sm:inline">Save</span>
+                            </button>
+                            <button onClick={() => setRecordedNotes([])} disabled={recordedNotes.length === 0} className="flex-1 min-w-0 bg-red-600 hover:bg-red-500 disabled:bg-slate-600 px-2 py-2 rounded text-sm">
                               Clear
                             </button>
                           </div>
@@ -635,6 +787,9 @@ export default function MusicProductionGuide() {
                                     <div className="flex gap-2">
                                       <button onClick={() => playKeyboardIdea(idea)} className="bg-green-600 hover:bg-green-500 px-3 py-1 rounded text-sm">
                                         <Play className="w-4 h-4" />
+                                      </button>
+                                      <button onClick={stopAllNotes} className="bg-orange-600 hover:bg-orange-500 px-3 py-1 rounded text-sm">
+                                        <Square className="w-4 h-4" />
                                       </button>
                                       <button onClick={() => setSavedKeyboardIdeas(savedKeyboardIdeas.filter(i => i.id !== idea.id))} className="bg-red-600 hover:bg-red-500 px-3 py-1 rounded text-sm">
                                         <Trash2 className="w-4 h-4" />
