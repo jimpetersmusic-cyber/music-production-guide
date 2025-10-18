@@ -16,20 +16,31 @@
       gain.gain.exponentialRampToValueAtTime(0.01, now + duration / 1000);
     } else if (instrument === 'pad') {
       osc.type = 'sine';
-      gain.gain.setValueAtTime(0.2, now);
-      gain.gain.exponentialRampToValueAtTime(0.15, now + duration / 1000);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.1, now + duration / 1000);
     } else if (instrument === 'pluck') {
       osc.type = 'triangle';
       gain.gain.setValueAtTime(0.4, now);
-      gain.gain.exponentialRampToValueAtTime(0.05, now + duration / 1000);
+      gain.gain.exponentialRampToValueAtTime(0.02, now + duration / 1000);
     }
     
     osc.start(now);
     osc.stop(now + duration / 1000);
+    oscillatorsRef.current.push(osc);
+    
+    setTimeout(() => {
+      oscillatorsRef.current = oscillatorsRef.current.filter(o => o !== osc);
+    }, duration);
   };
 
   const stopAllNotes = () => {
     playingTimeoutIds.forEach(id => clearTimeout(id));
+    oscillatorsRef.current.forEach(osc => {
+      try {
+        osc.stop();
+      } catch (e) {}
+    });
+    oscillatorsRef.current = [];
     setPlayingTimeoutIds([]);
     setIsPlayingNotes(false);
   };import React, { useState, useRef, useEffect } from 'react';
@@ -56,6 +67,7 @@ export default function MusicProductionGuide() {
   const mediaRecorderRef = useRef(null);
   const audioContextRef = useRef(null);
   const dbRef = useRef(null);
+  const oscillatorsRef = useRef([]);
 
   // Initialize IndexedDB and load data
   useEffect(() => {
@@ -362,6 +374,7 @@ export default function MusicProductionGuide() {
         const url = URL.createObjectURL(blob);
         const newRecording = { url, date: new Date().toLocaleString(), id: Date.now() };
         setRecordings(prev => [...prev, newRecording]);
+        stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.start();
@@ -670,16 +683,16 @@ export default function MusicProductionGuide() {
                             </div>
                           </div>
                           <div className="flex gap-2 mb-4">
-                            <button onClick={playRecordedNotes} disabled={recordedNotes.length === 0 || isPlayingNotes} className="flex-1 bg-green-600 hover:bg-green-500 disabled:bg-slate-600 px-4 py-2 rounded flex items-center justify-center gap-2">
-                              <Play className="w-4 h-4" /> Play
+                            <button onClick={playRecordedNotes} disabled={recordedNotes.length === 0 || isPlayingNotes} className="flex-1 min-w-0 bg-green-600 hover:bg-green-500 disabled:bg-slate-600 px-2 py-2 rounded flex items-center justify-center gap-1 text-sm">
+                              <Play className="w-4 h-4 flex-shrink-0" /> <span className="hidden sm:inline">Play</span>
                             </button>
-                            <button onClick={stopAllNotes} disabled={!isPlayingNotes} className="flex-1 bg-orange-600 hover:bg-orange-500 disabled:bg-slate-600 px-4 py-2 rounded flex items-center justify-center gap-2">
-                              <Square className="w-4 h-4" /> Stop
+                            <button onClick={stopAllNotes} disabled={!isPlayingNotes} className="flex-1 min-w-0 bg-orange-600 hover:bg-orange-500 disabled:bg-slate-600 px-2 py-2 rounded flex items-center justify-center gap-1 text-sm">
+                              <Square className="w-4 h-4 flex-shrink-0" /> <span className="hidden sm:inline">Stop</span>
                             </button>
-                            <button onClick={saveKeyboardIdea} disabled={recordedNotes.length === 0} className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 px-4 py-2 rounded flex items-center justify-center gap-2">
-                              💾 Save Idea
+                            <button onClick={saveKeyboardIdea} disabled={recordedNotes.length === 0} className="flex-1 min-w-0 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 px-2 py-2 rounded flex items-center justify-center gap-1 text-sm">
+                              💾 <span className="hidden sm:inline">Save</span>
                             </button>
-                            <button onClick={() => setRecordedNotes([])} disabled={recordedNotes.length === 0} className="flex-1 bg-red-600 hover:bg-red-500 disabled:bg-slate-600 px-4 py-2 rounded">
+                            <button onClick={() => setRecordedNotes([])} disabled={recordedNotes.length === 0} className="flex-1 min-w-0 bg-red-600 hover:bg-red-500 disabled:bg-slate-600 px-2 py-2 rounded text-sm">
                               Clear
                             </button>
                           </div>
