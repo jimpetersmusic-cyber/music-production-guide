@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Trash2, ChevronRight, Music, Zap, Info, X, Mic, Play, Square, Download } from 'lucide-react';
 
 export default function MusicProductionGuide() {
@@ -15,9 +15,122 @@ export default function MusicProductionGuide() {
   const [savedKeyboardIdeas, setSavedKeyboardIdeas] = useState([]);
   const [isPlayingNotes, setIsPlayingNotes] = useState(false);
   const [octave, setOctave] = useState(4);
+  const [dbReady, setDbReady] = useState(false);
   
   const mediaRecorderRef = useRef(null);
   const audioContextRef = useRef(null);
+  const dbRef = useRef(null);
+
+  // Initialize IndexedDB
+  useEffect(() => {
+    const initDB = () => {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open('MusicProductionDB', 1);
+        
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          dbRef.current = request.result;
+          resolve(request.result);
+        };
+        
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains('projects')) {
+            db.createObjectStore('projects', { keyPath: 'id' });
+          }
+          if (!db.objectStoreNames.contains('keyboardIdeas')) {
+            db.createObjectStore('keyboardIdeas', { keyPath: 'id' });
+          }
+          if (!db.objectStoreNames.contains('recordings')) {
+            db.createObjectStore('recordings', { keyPath: 'id' });
+          }
+        };
+      });
+    };
+
+    const loadData = async () => {
+      try {
+        await initDB();
+        const db = dbRef.current;
+        
+        // Load projects
+        const projectsTx = db.transaction('projects', 'readonly');
+        const projectsStore = projectsTx.objectStore('projects');
+        const projectsRequest = projectsStore.getAll();
+        
+        projectsRequest.onsuccess = () => {
+          setProjects(projectsRequest.result);
+        };
+
+        // Load keyboard ideas
+        const ideasTx = db.transaction('keyboardIdeas', 'readonly');
+        const ideasStore = ideasTx.objectStore('keyboardIdeas');
+        const ideasRequest = ideasStore.getAll();
+        
+        ideasRequest.onsuccess = () => {
+          setSavedKeyboardIdeas(ideasRequest.result);
+        };
+
+        // Load recordings
+        const recordingsTx = db.transaction('recordings', 'readonly');
+        const recordingsStore = recordingsTx.objectStore('recordings');
+        const recordingsRequest = recordingsStore.getAll();
+        
+        recordingsRequest.onsuccess = () => {
+          setRecordings(recordingsRequest.result);
+        };
+
+        setDbReady(true);
+      } catch (error) {
+        console.error('Failed to initialize database:', error);
+        setDbReady(true); // Still allow app to work without persistence
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Save projects to IndexedDB
+  useEffect(() => {
+    if (!dbReady || !dbRef.current) return;
+    
+    const db = dbRef.current;
+    const tx = db.transaction('projects', 'readwrite');
+    const store = tx.objectStore('projects');
+    
+    store.clear();
+    projects.forEach(project => {
+      store.add(project);
+    });
+  }, [projects, dbReady]);
+
+  // Save keyboard ideas to IndexedDB
+  useEffect(() => {
+    if (!dbReady || !dbRef.current) return;
+    
+    const db = dbRef.current;
+    const tx = db.transaction('keyboardIdeas', 'readwrite');
+    const store = tx.objectStore('keyboardIdeas');
+    
+    store.clear();
+    savedKeyboardIdeas.forEach(idea => {
+      store.add(idea);
+    });
+  }, [savedKeyboardIdeas, dbReady]);
+
+  // Save recordings to IndexedDB
+  useEffect(() => {
+    if (!dbReady || !dbRef.current) return;
+    
+    const db = dbRef.current;
+    const tx = db.transaction('recordings', 'readwrite');
+    const store = tx.objectStore('recordings');
+    
+    store.clear();
+    recordings.forEach(recording => {
+      store.add(recording);
+    });
+  }, [recordings, dbReady]);
 
   const phases = [
     {
@@ -95,19 +208,19 @@ export default function MusicProductionGuide() {
   ];
 
   const noteFrequencies = {
-  'C': 261.63 * Math.pow(2, octave - 4),
-  'C#': 277.18 * Math.pow(2, octave - 4),
-  'D': 293.66 * Math.pow(2, octave - 4),
-  'D#': 311.13 * Math.pow(2, octave - 4),
-  'E': 329.63 * Math.pow(2, octave - 4),
-  'F': 349.23 * Math.pow(2, octave - 4),
-  'F#': 369.99 * Math.pow(2, octave - 4),
-  'G': 392.00 * Math.pow(2, octave - 4),
-  'G#': 415.30 * Math.pow(2, octave - 4),
-  'A': 440 * Math.pow(2, octave - 4),
-  'A#': 466.16 * Math.pow(2, octave - 4),
-  'B': 493.88 * Math.pow(2, octave - 4),
-};
+    'C': 261.63 * Math.pow(2, octave - 4),
+    'C#': 277.18 * Math.pow(2, octave - 4),
+    'D': 293.66 * Math.pow(2, octave - 4),
+    'D#': 311.13 * Math.pow(2, octave - 4),
+    'E': 329.63 * Math.pow(2, octave - 4),
+    'F': 349.23 * Math.pow(2, octave - 4),
+    'F#': 369.99 * Math.pow(2, octave - 4),
+    'G': 392.00 * Math.pow(2, octave - 4),
+    'G#': 415.30 * Math.pow(2, octave - 4),
+    'A': 440 * Math.pow(2, octave - 4),
+    'A#': 466.16 * Math.pow(2, octave - 4),
+    'B': 493.88 * Math.pow(2, octave - 4),
+  };
 
   const initAudioContext = () => {
     if (!audioContextRef.current) {
@@ -303,11 +416,22 @@ export default function MusicProductionGuide() {
   const currentProject = projects.find(p => p.id === activeProjectId);
   const currentPhase = phases.find(p => p.id === activePhase);
   const completedPhases = currentProject ? Object.keys(currentProject.phaseData).filter(key => {
-  const phaseData = currentProject.phaseData[key];
-  const phase = phases.find(p => p.id === key);
-  return phaseData.checkedTips && phaseData.checkedTips.length === phase.tips.length;
-}).length : 0;
+    const phaseData = currentProject.phaseData[key];
+    const phase = phases.find(p => p.id === key);
+    return phaseData.checkedTips && phaseData.checkedTips.length === phase.tips.length;
+  }).length : 0;
   const progressPercent = currentProject ? Math.round((completedPhases / phases.length) * 100) : 0;
+
+  if (!dbReady) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <Music className="w-12 h-12 text-purple-400 mx-auto mb-4 animate-pulse" />
+          <p className="text-slate-400">Loading your projects...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-6">
@@ -441,27 +565,28 @@ export default function MusicProductionGuide() {
                                     <Info className="w-4 h-4 text-purple-400" />
                                   </button>
                                 </div>
-<textarea 
-  value={tipNote} 
-  onChange={(e) => {
-    updateTipNote(activeProjectId, currentPhase.id, idx, e.target.value);
-  }} 
-  onInput={(e) => {
-    e.target.style.height = 'auto';
-    e.target.style.height = Math.min(e.target.scrollHeight, 400) + 'px';
-  }}
-  ref={(el) => {
-    if (el && tipNote) {
-      setTimeout(() => {
-        el.style.height = 'auto';
-        el.style.height = Math.min(el.scrollHeight, 400) + 'px';
-      }, 0);
-    }
-  }}
-  placeholder="Add notes..." 
-  className="w-full bg-slate-600 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-  style={{ minHeight: '64px', resize: 'none' }}
-/>                             </div>
+                                <textarea 
+                                  value={tipNote} 
+                                  onChange={(e) => {
+                                    updateTipNote(activeProjectId, currentPhase.id, idx, e.target.value);
+                                  }} 
+                                  onInput={(e) => {
+                                    e.target.style.height = 'auto';
+                                    e.target.style.height = Math.min(e.target.scrollHeight, 400) + 'px';
+                                  }}
+                                  ref={(el) => {
+                                    if (el && tipNote) {
+                                      setTimeout(() => {
+                                        el.style.height = 'auto';
+                                        el.style.height = Math.min(el.scrollHeight, 400) + 'px';
+                                      }, 0);
+                                    }
+                                  }}
+                                  placeholder="Add notes..." 
+                                  className="w-full bg-slate-600 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                  style={{ minHeight: '64px', resize: 'none' }}
+                                />
+                              </div>
                             );
                           })}
                         </div>
@@ -490,21 +615,21 @@ export default function MusicProductionGuide() {
                             <button onClick={() => setOctave(Math.min(7, octave + 1))} className="bg-slate-600 hover:bg-slate-500 px-3 py-1 rounded text-sm">+</button>
                           </div>
                           <div className="relative mb-6">
-  <div className="flex gap-1 mb-2 h-24">
-    {['C', 'D', 'E', 'F', 'G', 'A', 'B'].map(note => (
-      <div key={note} className="relative flex-1">
-        <button onClick={() => handleKeyPress(note)} className="w-full h-24 bg-white hover:bg-gray-200 active:bg-gray-300 text-black font-bold rounded-b-lg border border-gray-300 transition">
-          {note}
-        </button>
-        {['C', 'D', 'F', 'G', 'A'].includes(note) && (
-          <button onClick={() => handleKeyPress(note + '#')} className="absolute right-0 top-0 w-2/3 h-16 bg-black hover:bg-gray-800 active:bg-gray-900 text-white font-bold rounded-b-md border border-black transition z-10 text-xs">
-            {note}#
-          </button>
-        )}
-      </div>
-    ))}
-  </div>
-</div>
+                            <div className="flex gap-1 mb-2 h-24">
+                              {['C', 'D', 'E', 'F', 'G', 'A', 'B'].map(note => (
+                                <div key={note} className="relative flex-1">
+                                  <button onClick={() => handleKeyPress(note)} className="w-full h-24 bg-white hover:bg-gray-200 active:bg-gray-300 text-black font-bold rounded-b-lg border border-gray-300 transition">
+                                    {note}
+                                  </button>
+                                  {['C', 'D', 'F', 'G', 'A'].includes(note) && (
+                                    <button onClick={() => handleKeyPress(note + '#')} className="absolute right-0 top-0 w-2/3 h-16 bg-black hover:bg-gray-800 active:bg-gray-900 text-white font-bold rounded-b-md border border-black transition z-10 text-xs">
+                                      {note}#
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                           <div className="flex gap-2 mb-4">
                             <button onClick={playRecordedNotes} disabled={recordedNotes.length === 0 || isPlayingNotes} className="flex-1 bg-green-600 hover:bg-green-500 disabled:bg-slate-600 px-4 py-2 rounded flex items-center justify-center gap-2">
                               <Play className="w-4 h-4" /> Play
@@ -547,7 +672,7 @@ export default function MusicProductionGuide() {
                           <h3 className="text-xl font-semibold mb-4 text-purple-300">Audio Recorder</h3>
                           <div className="mb-4">
                             {isRecording ? (
-                              <button onClick={stopAudioRecording} className="w-full bg-red-600 hover:bg-red-500 px-4 py-3 rounded-lg flex items-center justify-center gap-2  font-semibold">
+                              <button onClick={stopAudioRecording} className="w-full bg-red-600 hover:bg-red-500 px-4 py-3 rounded-lg flex items-center justify-center gap-2 font-semibold">
                                 <Square className="w-5 h-5" /> Stop Recording
                               </button>
                             ) : (
