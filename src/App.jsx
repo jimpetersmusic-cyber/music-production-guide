@@ -1,4 +1,38 @@
-import React, { useState, useRef, useEffect } from 'react';
+  const playNote = (frequency, duration = 200, instrument = 'bell') => {
+    const audioContext = initAudioContext();
+    const now = audioContext.currentTime;
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    
+    osc.frequency.value = frequency;
+    
+    // Different instrument types
+    if (instrument === 'bell') {
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + duration / 1000);
+    } else if (instrument === 'pad') {
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.15, now + duration / 1000);
+    } else if (instrument === 'pluck') {
+      osc.type = 'triangle';
+      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.exponentialRampToValueAtTime(0.05, now + duration / 1000);
+    }
+    
+    osc.start(now);
+    osc.stop(now + duration / 1000);
+  };
+
+  const stopAllNotes = () => {
+    playingTimeoutIds.forEach(id => clearTimeout(id));
+    setPlayingTimeoutIds([]);
+    setIsPlayingNotes(false);
+  };import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Trash2, ChevronRight, Music, Zap, Info, X, Mic, Play, Square, Download } from 'lucide-react';
 
 export default function MusicProductionGuide() {
@@ -16,12 +50,14 @@ export default function MusicProductionGuide() {
   const [isPlayingNotes, setIsPlayingNotes] = useState(false);
   const [octave, setOctave] = useState(4);
   const [dbReady, setDbReady] = useState(false);
+  const [selectedInstrument, setSelectedInstrument] = useState('bell');
+  const [playingTimeoutIds, setPlayingTimeoutIds] = useState([]);
   
   const mediaRecorderRef = useRef(null);
   const audioContextRef = useRef(null);
   const dbRef = useRef(null);
 
-  // Initialize IndexedDB
+  // Initialize IndexedDB and load data
   useEffect(() => {
     const initDB = () => {
       return new Promise((resolve, reject) => {
@@ -82,8 +118,8 @@ export default function MusicProductionGuide() {
 
         setDbReady(true);
       } catch (error) {
-        console.error('Failed to initialize database:', error);
-        setDbReady(true); // Still allow app to work without persistence
+        console.error('DB error:', error);
+        setDbReady(true);
       }
     };
 
@@ -249,7 +285,7 @@ export default function MusicProductionGuide() {
 
   const handleKeyPress = (note) => {
     const freq = noteFrequencies[note];
-    playNote(freq);
+    playNote(freq, 200, selectedInstrument);
     setRecordedNotes([...recordedNotes, { note, time: Date.now(), frequency: freq }]);
   };
 
@@ -257,15 +293,20 @@ export default function MusicProductionGuide() {
     setIsPlayingNotes(true);
     if (recordedNotes.length > 0) {
       const startTime = recordedNotes[0].time;
+      const timeoutIds = [];
       
       for (let i = 0; i < recordedNotes.length; i++) {
         const note = recordedNotes[i];
         const delay = note.time - startTime;
-        setTimeout(() => playNote(note.frequency, 200), delay);
+        const id = setTimeout(() => playNote(note.frequency, 200, selectedInstrument), delay);
+        timeoutIds.push(id);
       }
       
       const totalDuration = recordedNotes[recordedNotes.length - 1].time - startTime + 200;
-      setTimeout(() => setIsPlayingNotes(false), totalDuration);
+      const finalId = setTimeout(() => setIsPlayingNotes(false), totalDuration);
+      timeoutIds.push(finalId);
+      
+      setPlayingTimeoutIds(timeoutIds);
     }
   };
 
@@ -286,15 +327,20 @@ export default function MusicProductionGuide() {
     setIsPlayingNotes(true);
     if (idea.notes.length > 0) {
       const startTime = idea.notes[0].time;
+      const timeoutIds = [];
       
       for (let i = 0; i < idea.notes.length; i++) {
         const note = idea.notes[i];
         const delay = note.time - startTime;
-        setTimeout(() => playNote(note.frequency, 200), delay);
+        const id = setTimeout(() => playNote(note.frequency, 200, selectedInstrument), delay);
+        timeoutIds.push(id);
       }
       
       const totalDuration = idea.notes[idea.notes.length - 1].time - startTime + 200;
-      setTimeout(() => setIsPlayingNotes(false), totalDuration);
+      const finalId = setTimeout(() => setIsPlayingNotes(false), totalDuration);
+      timeoutIds.push(finalId);
+      
+      setPlayingTimeoutIds(timeoutIds);
     }
   };
 
@@ -475,7 +521,6 @@ export default function MusicProductionGuide() {
                       <div onClick={() => { setActiveProjectId(project.id); setActiveTab('phases'); }}>
                         <p className="font-medium text-sm">{project.name}</p>
                         <p className="text-xs text-slate-400 mt-1">{project.createdAt}</p>
-                        <p className="text-xs text-slate-400 mt-2">Tap to view progress</p>
                       </div>
                       <button onClick={(e) => { e.stopPropagation(); deleteProject(project.id); }} className="mt-2 w-full p-1 text-red-400 hover:bg-red-500/20 rounded text-xs transition">
                         <Trash2 className="w-4 h-4 inline mr-1" /> Delete
@@ -565,27 +610,7 @@ export default function MusicProductionGuide() {
                                     <Info className="w-4 h-4 text-purple-400" />
                                   </button>
                                 </div>
-                                <textarea 
-                                  value={tipNote} 
-                                  onChange={(e) => {
-                                    updateTipNote(activeProjectId, currentPhase.id, idx, e.target.value);
-                                  }} 
-                                  onInput={(e) => {
-                                    e.target.style.height = 'auto';
-                                    e.target.style.height = Math.min(e.target.scrollHeight, 400) + 'px';
-                                  }}
-                                  ref={(el) => {
-                                    if (el && tipNote) {
-                                      setTimeout(() => {
-                                        el.style.height = 'auto';
-                                        el.style.height = Math.min(el.scrollHeight, 400) + 'px';
-                                      }, 0);
-                                    }
-                                  }}
-                                  placeholder="Add notes..." 
-                                  className="w-full bg-slate-600 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                  style={{ minHeight: '64px', resize: 'none' }}
-                                />
+                                <textarea value={tipNote} onChange={(e) => updateTipNote(activeProjectId, currentPhase.id, idx, e.target.value)} placeholder="Add notes..." className="w-full bg-slate-600 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" style={{ minHeight: '64px', resize: 'none' }} />
                               </div>
                             );
                           })}
@@ -614,6 +639,20 @@ export default function MusicProductionGuide() {
                             <span className="text-lg font-bold w-8 text-center">{octave}</span>
                             <button onClick={() => setOctave(Math.min(7, octave + 1))} className="bg-slate-600 hover:bg-slate-500 px-3 py-1 rounded text-sm">+</button>
                           </div>
+                          <div className="mb-4">
+                            <p className="text-sm text-slate-300 mb-2">Instrument:</p>
+                            <div className="flex gap-2">
+                              {['bell', 'pad', 'pluck'].map(inst => (
+                                <button
+                                  key={inst}
+                                  onClick={() => setSelectedInstrument(inst)}
+                                  className={`px-3 py-1 rounded text-sm capitalize transition ${selectedInstrument === inst ? 'bg-purple-600' : 'bg-slate-600 hover:bg-slate-500'}`}
+                                >
+                                  {inst}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                           <div className="relative mb-6">
                             <div className="flex gap-1 mb-2 h-24">
                               {['C', 'D', 'E', 'F', 'G', 'A', 'B'].map(note => (
@@ -633,6 +672,9 @@ export default function MusicProductionGuide() {
                           <div className="flex gap-2 mb-4">
                             <button onClick={playRecordedNotes} disabled={recordedNotes.length === 0 || isPlayingNotes} className="flex-1 bg-green-600 hover:bg-green-500 disabled:bg-slate-600 px-4 py-2 rounded flex items-center justify-center gap-2">
                               <Play className="w-4 h-4" /> Play
+                            </button>
+                            <button onClick={stopAllNotes} disabled={!isPlayingNotes} className="flex-1 bg-orange-600 hover:bg-orange-500 disabled:bg-slate-600 px-4 py-2 rounded flex items-center justify-center gap-2">
+                              <Square className="w-4 h-4" /> Stop
                             </button>
                             <button onClick={saveKeyboardIdea} disabled={recordedNotes.length === 0} className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 px-4 py-2 rounded flex items-center justify-center gap-2">
                               💾 Save Idea
@@ -656,6 +698,9 @@ export default function MusicProductionGuide() {
                                     <div className="flex gap-2">
                                       <button onClick={() => playKeyboardIdea(idea)} className="bg-green-600 hover:bg-green-500 px-3 py-1 rounded text-sm">
                                         <Play className="w-4 h-4" />
+                                      </button>
+                                      <button onClick={stopAllNotes} className="bg-orange-600 hover:bg-orange-500 px-3 py-1 rounded text-sm">
+                                        <Square className="w-4 h-4" />
                                       </button>
                                       <button onClick={() => setSavedKeyboardIdeas(savedKeyboardIdeas.filter(i => i.id !== idea.id))} className="bg-red-600 hover:bg-red-500 px-3 py-1 rounded text-sm">
                                         <Trash2 className="w-4 h-4" />
