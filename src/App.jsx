@@ -394,9 +394,10 @@ export default function MusicProductionGuide() {
       
       const idea = {
         id: Date.now(),
+        projectId: activeProjectId, // Link to current project
         notes: notesToSave,
         date: new Date().toLocaleString(),
-        name: `Idea ${savedKeyboardIdeas.length + 1}`
+        name: `Idea ${savedKeyboardIdeas.filter(i => i.projectId === activeProjectId).length + 1}`
       };
       setSavedKeyboardIdeas([...savedKeyboardIdeas, idea]);
       setRecordedNotes([]);
@@ -448,7 +449,12 @@ export default function MusicProductionGuide() {
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: 'audio/wav' });
         const url = URL.createObjectURL(blob);
-        const newRecording = { url, date: new Date().toLocaleString(), id: Date.now() };
+        const newRecording = { 
+          url, 
+          date: new Date().toLocaleString(), 
+          id: Date.now(),
+          projectId: activeProjectId // Link to current project
+        };
         setRecordings(prev => [...prev, newRecording]);
         stream.getTracks().forEach(track => track.stop());
       };
@@ -774,11 +780,11 @@ export default function MusicProductionGuide() {
                           </div>
                           <p className="text-xs text-slate-400">Current: {recordedNotes.length} notes</p>
 
-                          {savedKeyboardIdeas.length > 0 && (
+                          {savedKeyboardIdeas.filter(idea => idea.projectId === activeProjectId).length > 0 && (
                             <div className="mt-6 pt-6 border-t border-slate-600">
                               <p className="text-sm font-semibold text-purple-300 mb-3">Saved Keyboard Ideas:</p>
                               <div className="space-y-2">
-                                {savedKeyboardIdeas.map((idea) => (
+                                {savedKeyboardIdeas.filter(idea => idea.projectId === activeProjectId).map((idea) => (
                                   <div key={idea.id} className="flex items-center justify-between bg-slate-600 p-3 rounded-lg">
                                     <div>
                                       <p className="text-sm font-medium">{idea.name}</p>
@@ -817,10 +823,10 @@ export default function MusicProductionGuide() {
                           </div>
                           {isRecording && <p className="text-red-400 text-sm text-center animate-pulse">● Recording in progress...</p>}
 
-                          {recordings && recordings.length > 0 && (
+                          {recordings.filter(rec => rec.projectId === activeProjectId).length > 0 && (
                             <div className="mt-6 pt-6 border-t border-slate-600 space-y-3">
-                              <p className="text-sm font-semibold text-purple-300">Audio Recordings ({recordings.length}):</p>
-                              {recordings.map((recording, idx) => (
+                              <p className="text-sm font-semibold text-purple-300">Audio Recordings ({recordings.filter(rec => rec.projectId === activeProjectId).length}):</p>
+                              {recordings.filter(rec => rec.projectId === activeProjectId).map((recording, idx) => (
                                 <div key={recording.id} className="bg-slate-700 p-3 rounded-lg">
                                   <p className="text-sm font-medium mb-2">Recording {idx + 1}</p>
                                   <p className="text-xs text-slate-400 mb-2">{recording.date}</p>
