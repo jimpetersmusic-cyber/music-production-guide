@@ -19,6 +19,7 @@ export default function MusicProductionGuide() {
   const [selectedInstrument, setSelectedInstrument] = useState('bell');
   const [playingTimeoutIds, setPlayingTimeoutIds] = useState([]);
   const [lastPadNoteStartTime, setLastPadNoteStartTime] = useState(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null);
   
   const mediaRecorderRef = useRef(null);
   const audioContextRef = useRef(null);
@@ -504,11 +505,39 @@ export default function MusicProductionGuide() {
   };
 
   const deleteProject = (id) => {
-    setProjects(projects.filter(p => p.id !== id));
-    if (activeProjectId === id) {
-      setActiveProjectId(null);
-      setActivePhase(null);
+    const projectToDelete = projects.find(p => p.id === id);
+    setDeleteConfirmation({
+      type: 'project',
+      id: id,
+      name: projectToDelete?.name,
+      message: `Are you sure you want to delete "${projectToDelete?.name}"? This will also delete all associated keyboard ideas and recordings. This action cannot be undone.`
+    });
+  };
+  
+  const confirmDelete = () => {
+    if (!deleteConfirmation) return;
+    
+    if (deleteConfirmation.type === 'project') {
+      const id = deleteConfirmation.id;
+      setProjects(projects.filter(p => p.id !== id));
+      setSavedKeyboardIdeas(savedKeyboardIdeas.filter(idea => idea.projectId !== id));
+      setRecordings(recordings.filter(rec => rec.projectId !== id));
+      
+      if (activeProjectId === id) {
+        setActiveProjectId(null);
+        setActivePhase(null);
+      }
+    } else if (deleteConfirmation.type === 'idea') {
+      setSavedKeyboardIdeas(savedKeyboardIdeas.filter(i => i.id !== deleteConfirmation.id));
+    } else if (deleteConfirmation.type === 'recording') {
+      setRecordings(recordings.filter(r => r.id !== deleteConfirmation.id));
     }
+    
+    setDeleteConfirmation(null);
+  };
+  
+  const cancelDelete = () => {
+    setDeleteConfirmation(null);
   };
 
   const toggleTip = (projectId, phaseId, tipIndex) => {
@@ -621,7 +650,10 @@ export default function MusicProductionGuide() {
                         <p className="font-medium text-sm">{project.name}</p>
                         <p className="text-xs text-slate-400 mt-1">{project.createdAt}</p>
                       </div>
-                      <button onClick={(e) => { e.stopPropagation(); deleteProject(project.id); }} className="mt-2 w-full p-1 text-red-400 hover:bg-red-500/20 rounded text-xs transition">
+                      <button onClick={(e) => { 
+                        e.stopPropagation(); 
+                        deleteProject(project.id);
+                      }} className="mt-2 w-full p-1 text-red-400 hover:bg-red-500/20 rounded text-xs transition">
                         <Trash2 className="w-4 h-4 inline mr-1" /> Delete
                       </button>
                     </div>
@@ -801,7 +833,14 @@ export default function MusicProductionGuide() {
                                       <button onClick={stopAllNotes} className="bg-orange-600 hover:bg-orange-500 px-3 py-1 rounded text-sm">
                                         <Square className="w-4 h-4" />
                                       </button>
-                                      <button onClick={() => setSavedKeyboardIdeas(savedKeyboardIdeas.filter(i => i.id !== idea.id))} className="bg-red-600 hover:bg-red-500 px-3 py-1 rounded text-sm">
+                                      <button onClick={() => {
+                                        setDeleteConfirmation({
+                                          type: 'idea',
+                                          id: idea.id,
+                                          name: idea.name,
+                                          message: `Are you sure you want to delete "${idea.name}"? This action cannot be undone.`
+                                        });
+                                      }} className="bg-red-600 hover:bg-red-500 px-3 py-1 rounded text-sm">
                                         <Trash2 className="w-4 h-4" />
                                       </button>
                                     </div>
@@ -839,7 +878,14 @@ export default function MusicProductionGuide() {
                                     <button onClick={() => downloadRecording(recording.url, idx)} className="bg-purple-600 hover:bg-purple-500 px-3 py-2 rounded text-sm flex items-center gap-1">
                                       <Download className="w-4 h-4" /> Download
                                     </button>
-                                    <button onClick={() => setRecordings(recordings.filter(r => r.id !== recording.id))} className="bg-red-600 hover:bg-red-500 px-3 py-2 rounded text-sm">
+                                    <button onClick={() => {
+                                      setDeleteConfirmation({
+                                        type: 'recording',
+                                        id: recording.id,
+                                        name: `Recording ${idx + 1}`,
+                                        message: `Are you sure you want to delete Recording ${idx + 1}? This action cannot be undone.`
+                                      });
+                                    }} className="bg-red-600 hover:bg-red-500 px-3 py-2 rounded text-sm">
                                       <Trash2 className="w-4 h-4" />
                                     </button>
                                   </div>
@@ -869,6 +915,25 @@ export default function MusicProductionGuide() {
             </div>
             <div className="p-6 text-slate-300">
               <p>{selectedTipDetails.details}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirmation && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-800 rounded-lg border border-red-500/30 max-w-md w-full">
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-red-400 mb-4">Confirm Delete</h2>
+              <p className="text-slate-300 mb-6">{deleteConfirmation.message}</p>
+              <div className="flex gap-3">
+                <button onClick={confirmDelete} className="flex-1 bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-semibold transition">
+                  Delete
+                </button>
+                <button onClick={cancelDelete} className="flex-1 bg-slate-600 hover:bg-slate-700 px-4 py-2 rounded font-semibold transition">
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
