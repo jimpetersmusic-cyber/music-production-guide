@@ -73,7 +73,9 @@ export default function MusicProductionGuide() {
         const ideasRequest = ideasStore.getAll();
         
         ideasRequest.onsuccess = () => {
-          setSavedKeyboardIdeas(ideasRequest.result);
+          // Filter out any ideas without a projectId (old data)
+          const validIdeas = ideasRequest.result.filter(idea => idea.projectId);
+          setSavedKeyboardIdeas(validIdeas);
         };
 
         // Load recordings
@@ -82,7 +84,9 @@ export default function MusicProductionGuide() {
         const recordingsRequest = recordingsStore.getAll();
         
         recordingsRequest.onsuccess = () => {
-          setRecordings(recordingsRequest.result);
+          // Filter out any recordings without a projectId (old data)
+          const validRecordings = recordingsRequest.result.filter(rec => rec.projectId);
+          setRecordings(validRecordings);
         };
 
         setDbReady(true);
