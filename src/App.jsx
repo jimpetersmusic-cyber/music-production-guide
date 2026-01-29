@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Trash2, ChevronRight, Music, Zap, Info, X, Mic, Play, Square, Download } from 'lucide-react';
+import { Plus, Trash2, ChevronRight, Music, Zap, Info, X, Mic, Play, Square, Download, Upload } from 'lucide-react';
 
 export default function MusicProductionGuide() {
   const [projects, setProjects] = useState([]);
@@ -20,6 +20,7 @@ export default function MusicProductionGuide() {
   const [playingTimeoutIds, setPlayingTimeoutIds] = useState([]);
   const [lastPadNoteStartTime, setLastPadNoteStartTime] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
+  const [showExportImport, setShowExportImport] = useState(false);
   
   const mediaRecorderRef = useRef(null);
   const audioContextRef = useRef(null);
@@ -540,6 +541,59 @@ export default function MusicProductionGuide() {
     setDeleteConfirmation(null);
   };
 
+  const exportData = () => {
+    const exportObj = {
+      version: "1.0",
+      exportDate: new Date().toISOString(),
+      projects: projects,
+      keyboardIdeas: savedKeyboardIdeas,
+      recordings: recordings.map(rec => ({
+        ...rec,
+        url: null // Can't export blob URLs
+      }))
+    };
+    
+    const dataStr = JSON.stringify(exportObj, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `music-production-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    setShowExportImport(false);
+  };
+
+  const importData = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const importedData = JSON.parse(e.target.result);
+        
+        if (importedData.projects) {
+          setProjects(importedData.projects);
+        }
+        if (importedData.keyboardIdeas) {
+          setSavedKeyboardIdeas(importedData.keyboardIdeas);
+        }
+        // Note: Audio recordings can't be imported (blob URLs don't persist)
+        
+        alert('Data imported successfully! Note: Audio recordings cannot be imported from backups.');
+        setShowExportImport(false);
+      } catch (error) {
+        alert('Error importing data. Please make sure the file is a valid backup.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const toggleTip = (projectId, phaseId, tipIndex) => {
     setProjects(projects.map(p => {
       if (p.id === projectId) {
@@ -616,6 +670,12 @@ export default function MusicProductionGuide() {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
               Electronic Music Production Guide
             </h1>
+            <button 
+              onClick={() => setShowExportImport(true)} 
+              className="ml-auto bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg transition text-sm flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" /> Backup
+            </button>
           </div>
           <p className="text-slate-400">Your step-by-step companion for creating electronic music</p>
         </div>
@@ -933,6 +993,54 @@ export default function MusicProductionGuide() {
                 <button onClick={cancelDelete} className="flex-1 bg-slate-600 hover:bg-slate-700 px-4 py-2 rounded font-semibold transition">
                   Cancel
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showExportImport && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-800 rounded-lg border border-purple-500/30 max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-purple-300">Backup & Restore</h2>
+                <button onClick={() => setShowExportImport(false)} className="p-1 hover:bg-slate-700 rounded transition">
+                  <X className="w-6 h-6 text-slate-400" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-300 mb-2">Export Data</h3>
+                  <p className="text-xs text-slate-400 mb-3">Download all your projects and keyboard ideas as a backup file.</p>
+                  <button 
+                    onClick={exportData} 
+                    className="w-full bg-purple-600 hover:bg-purple-700 px-4 py-3 rounded font-semibold transition flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-5 h-5" /> Export Backup
+                  </button>
+                </div>
+
+                <div className="border-t border-slate-700 pt-4">
+                  <h3 className="text-sm font-semibold text-slate-300 mb-2">Import Data</h3>
+                  <p className="text-xs text-slate-400 mb-3">Restore from a previously saved backup file. This will replace your current data.</p>
+                  <label className="w-full bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded font-semibold transition flex items-center justify-center gap-2 cursor-pointer">
+                    <Upload className="w-5 h-5" /> Import Backup
+                    <input 
+                      type="file" 
+                      accept=".json" 
+                      onChange={importData} 
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-3 mt-4">
+                  <p className="text-xs text-yellow-200">
+                    <strong>Note:</strong> Audio recordings cannot be backed up or restored due to technical limitations. Only projects and keyboard ideas will be saved.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
